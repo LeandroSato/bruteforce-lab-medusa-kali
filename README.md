@@ -13,15 +13,22 @@ e a ferramenta **Medusa**, em um ambiente 100% isolado e controlado com VirtualB
 > Use este material **apenas em ambientes próprios e isolados**, para fins de
 > aprendizado e auditoria autorizada.
 
+## Status do projeto
+
+| Cenário | Status |
+|---|---|
+| Configuração do ambiente (VMs + rede host-only) | ✅ Concluído — [docs/00-ambiente.md](docs/00-ambiente.md) |
+| Cenário 1 — Força bruta em FTP | ✅ Concluído — [docs/cenario-1-ftp.md](docs/cenario-1-ftp.md) |
+| Cenário 2 — DVWA (web form) | 🚧 Em andamento — [docs/cenario-2-dvwa.md](docs/cenario-2-dvwa.md) |
+| Cenário 3 — Password spraying SMB | 🚧 Em andamento — [docs/cenario-3-smb.md](docs/cenario-3-smb.md) |
+
 ## Sumário
 
 - [Objetivo](#objetivo)
 - [Ambiente de laboratório](#ambiente-de-laboratório)
 - [Topologia de rede](#topologia-de-rede)
 - [Ferramentas utilizadas](#ferramentas-utilizadas)
-- [Cenário 1 — Força bruta em FTP](#cenário-1--força-bruta-em-ftp)
-- [Cenário 2 — Automação de login no DVWA (web form)](#cenário-2--automação-de-login-no-dvwa-web-form)
-- [Cenário 3 — Password spraying em SMB](#cenário-3--password-spraying-em-smb)
+- [Documentação detalhada por cenário](#documentação-detalhada-por-cenário)
 - [Wordlists](#wordlists)
 - [Resultados](#resultados)
 - [Medidas de mitigação](#medidas-de-mitigação)
@@ -60,7 +67,7 @@ internet — requisito básico de segurança para qualquer exercício de pentest
 ```
 ┌─────────────────────┐        Rede Host-Only        ┌─────────────────────────┐
 │   Kali Linux (atk)   │ <───────────────────────────>│  Metasploitable 2 (alvo) │
-│  IP: 192.168.56.10   │                               │   IP: 192.168.56.20      │
+│  IP: 192.168.56.102  │                               │   IP: 192.168.56.101     │
 │  Ferramentas:        │                               │  Serviços vulneráveis:   │
 │  - Medusa             │                               │  - FTP (21)              │
 │  - Nmap               │                               │  - SMB (139/445)         │
@@ -68,8 +75,8 @@ internet — requisito básico de segurança para qualquer exercício de pentest
 └─────────────────────┘                               └─────────────────────────┘
 ```
 
-> Substitua os IPs acima pelos reais do seu ambiente (verifique com `ifconfig`/`ip a`
-> em cada VM).
+> IPs atribuídos via DHCP da rede host-only (`192.168.56.0/24`). Detalhes da
+> configuração completa em [docs/00-ambiente.md](docs/00-ambiente.md).
 
 ## Ferramentas utilizadas
 
@@ -79,69 +86,22 @@ internet — requisito básico de segurança para qualquer exercício de pentest
 - **DVWA** — aplicação web intencionalmente vulnerável para testes de login.
 - **enum4linux** *(opcional)* — enumeração de usuários/compartilhamentos SMB.
 
-## Cenário 1 — Força bruta em FTP
+## Documentação detalhada por cenário
 
-Script: [`scripts/01_ftp_bruteforce.sh`](scripts/01_ftp_bruteforce.sh)
+A configuração do ambiente e cada cenário de ataque têm documentação própria,
+com os comandos exatos executados, decisões tomadas durante o processo e
+capturas de tela como evidência:
 
-1. Reconhecimento da porta 21 com Nmap:
-   ```bash
-   nmap -p 21 -sV 192.168.56.20
-   ```
-2. Execução do Medusa contra o serviço FTP:
-   ```bash
-   medusa -h 192.168.56.20 -U wordlists/usuarios.txt -P wordlists/senhas.txt -M ftp -t 3 -f
-   ```
-   - `-h` → host alvo
-   - `-U` / `-P` → wordlists de usuários e senhas
-   - `-M ftp` → módulo do serviço
-   - `-t 3` → 3 threads simultâneas (evitar sobrecarga)
-   - `-f` → para no primeiro par válido encontrado
-3. Validação manual do acesso encontrado (login real via `ftp 192.168.56.20`).
+- 📄 [**docs/00-ambiente.md**](docs/00-ambiente.md) — configuração das VMs e
+  da rede host-only, com confirmação de conectividade
+- 📄 [**docs/cenario-1-ftp.md**](docs/cenario-1-ftp.md) — força bruta em FTP
+  (✅ concluído: credencial `msfadmin:msfadmin` encontrada e validada)
+- 📄 [**docs/cenario-2-dvwa.md**](docs/cenario-2-dvwa.md) — automação de login
+  no DVWA (🚧 em andamento)
+- 📄 [**docs/cenario-3-smb.md**](docs/cenario-3-smb.md) — password spraying em
+  SMB (🚧 em andamento)
 
-📸 *Capturas de tela sugeridas: `images/01-nmap-ftp.png`, `images/02-medusa-ftp-sucesso.png`*
-
-## Cenário 2 — Automação de login no DVWA (web form)
-
-Script: [`scripts/02_dvwa_web_form.sh`](scripts/02_dvwa_web_form.sh)
-
-1. Configurar o DVWA com **Security Level = Low** (menu *DVWA Security*).
-2. Inspecionar o formulário de login (`Ctrl+U` na página) para confirmar os
-   nomes dos campos (`username`, `password`, `Login`) e a mensagem exibida
-   em caso de falha (ex.: `Login failed`).
-3. Executar o Medusa com o módulo `web-form`:
-   ```bash
-   medusa -h 192.168.56.20 -U wordlists/usuarios.txt -P wordlists/senhas.txt \
-     -M web-form \
-     -m FORM:"/dvwa/login.php:username=^USER^&password=^PASS^&Login=Login:F=Login failed" \
-     -t 3
-   ```
-4. Validar manualmente qualquer credencial reportada como válida, logando
-   diretamente no navegador — formulários web geram falsos positivos com
-   frequência (cookies/tokens CSRF podem interferir no resultado).
-
-📸 *Capturas de tela sugeridas: `images/03-dvwa-login-page.png`, `images/04-medusa-webform.png`*
-
-## Cenário 3 — Password spraying em SMB
-
-Script: [`scripts/03_smb_password_spray.sh`](scripts/03_smb_password_spray.sh)
-
-**Diferença entre brute force e password spraying:**
-
-| Técnica            | Estratégia                                              | Risco de lockout |
-|---------------------|----------------------------------------------------------|-------------------|
-| Força bruta clássica| Muitas senhas × 1 usuário                                 | Alto              |
-| Password spraying   | Poucas senhas (as mais comuns) × muitos usuários          | Baixo             |
-
-1. Enumeração de usuários e compartilhamentos via Nmap:
-   ```bash
-   nmap -p 139,445 --script smb-enum-users,smb-enum-shares 192.168.56.20
-   ```
-2. Spraying com Medusa usando uma wordlist reduzida de senhas:
-   ```bash
-   medusa -h 192.168.56.20 -U wordlists/usuarios.txt -P senhas_spray.txt -M smbnt -t 3 -f
-   ```
-
-📸 *Capturas de tela sugeridas: `images/05-smb-enum.png`, `images/06-medusa-smb-sucesso.png`*
+Os scripts de cada cenário estão em [`scripts/`](scripts/).
 
 ## Wordlists
 
@@ -156,15 +116,11 @@ Script: [`scripts/03_smb_password_spray.sh`](scripts/03_smb_password_spray.sh)
 
 ## Resultados
 
-> Preencha esta seção com o que você observou ao rodar os scripts no seu
-> laboratório — tempo de execução, credenciais encontradas (ex.:
-> `msfadmin:msfadmin` no FTP do Metasploitable2), comportamento do DVWA, etc.
-
 | Cenário        | Credencial encontrada | Tempo aproximado | Observações |
 |----------------|------------------------|-------------------|-------------|
-| FTP            |                        |                   |             |
-| DVWA (web-form)|                        |                   |             |
-| SMB (spraying) |                        |                   |             |
+| FTP            | `msfadmin:msfadmin`   | ~3s (wordlist pequena) | Validado com login manual. Wordlist completa do Metasploit (174×1021) foi testada antes e estimada em 30h+ — trocada por wordlist curta e focada. Detalhes: [docs/cenario-1-ftp.md](docs/cenario-1-ftp.md) |
+| DVWA (web-form)| 🚧 em andamento        | —                 | — |
+| SMB (spraying) | 🚧 em andamento        | —                 | — |
 
 ## Medidas de mitigação
 
