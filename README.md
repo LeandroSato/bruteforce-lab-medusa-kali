@@ -19,7 +19,7 @@ e a ferramenta **Medusa**, em um ambiente 100% isolado e controlado com VirtualB
 |---|---|
 | Configuração do ambiente (VMs + rede host-only) | ✅ Concluído — [docs/00-ambiente.md](docs/00-ambiente.md) |
 | Cenário 1 — Força bruta em FTP | ✅ Concluído — [docs/cenario-1-ftp.md](docs/cenario-1-ftp.md) |
-| Cenário 2 — DVWA (web form) | 🚧 Em andamento — [docs/cenario-2-dvwa.md](docs/cenario-2-dvwa.md) |
+| Cenário 2 — DVWA (web form) | ✅ Concluído — [docs/cenario-2-dvwa.md](docs/cenario-2-dvwa.md) |
 | Cenário 3 — Password spraying SMB | 🚧 Em andamento — [docs/cenario-3-smb.md](docs/cenario-3-smb.md) |
 
 ## Sumário
@@ -119,7 +119,7 @@ Os scripts de cada cenário estão em [`scripts/`](scripts/).
 | Cenário        | Credencial encontrada | Tempo aproximado | Observações |
 |----------------|------------------------|-------------------|-------------|
 | FTP            | `msfadmin:msfadmin`   | ~3s (wordlist pequena) | Validado com login manual. Wordlist completa do Metasploit (174×1021) foi testada antes e estimada em 30h+ — trocada por wordlist curta e focada. Detalhes: [docs/cenario-1-ftp.md](docs/cenario-1-ftp.md) |
-| DVWA (web-form)| 🚧 em andamento        | —                 | — |
+| DVWA (web-form)| `admin:password`      | N/A (script custom) | Medusa e Hydra falharam (302 não tratado / falso positivo por token CSRF). Resolvido com script Python customizado. Detalhes: [docs/cenario-2-dvwa.md](docs/cenario-2-dvwa.md) |
 | SMB (spraying) | 🚧 em andamento        | —                 | — |
 
 ## Medidas de mitigação
