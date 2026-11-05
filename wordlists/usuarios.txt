@@ -1,0 +1,12 @@
+msfadmin
+admin
+root
+user
+service
+postgres
+klog
+sys
+ftp
+vagrant
+test
+guest

@@ -1,0 +1,12 @@
+123456
+password
+admin
+msfadmin
+root
+toor
+letmein
+qwerty
+12345678
+senha123
+vagrant
+test123
