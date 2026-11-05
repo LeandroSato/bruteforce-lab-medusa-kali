@@ -20,7 +20,7 @@ e a ferramenta **Medusa**, em um ambiente 100% isolado e controlado com VirtualB
 | Configuração do ambiente (VMs + rede host-only) | ✅ Concluído — [docs/00-ambiente.md](docs/00-ambiente.md) |
 | Cenário 1 — Força bruta em FTP | ✅ Concluído — [docs/cenario-1-ftp.md](docs/cenario-1-ftp.md) |
 | Cenário 2 — DVWA (web form) | ✅ Concluído — [docs/cenario-2-dvwa.md](docs/cenario-2-dvwa.md) |
-| Cenário 3 — Password spraying SMB | 🚧 Em andamento — [docs/cenario-3-smb.md](docs/cenario-3-smb.md) |
+| Cenário 3 — Password spraying SMB | ✅ Concluído — [docs/cenario-3-smb.md](docs/cenario-3-smb.md) |
 
 ## Sumário
 
@@ -109,6 +109,11 @@ Os scripts de cada cenário estão em [`scripts/`](scripts/).
   os padrões conhecidos do Metasploitable2 (ex.: `msfadmin`).
 - [`wordlists/senhas.txt`](wordlists/senhas.txt) — senhas fracas/comuns usadas
   nos testes de FTP e DVWA.
+- [`wordlists/smb_usuarios.txt`](wordlists/smb_usuarios.txt) — usuários reais
+  obtidos por enumeração anônima via SMB no Cenário 3 (não é uma lista
+  genérica — veio do reconhecimento feito no próprio laboratório).
+- [`wordlists/smb_senhas.txt`](wordlists/smb_senhas.txt) — lista curta de
+  senhas comuns usada no password spraying do Cenário 3.
 
 > Estas wordlists são propositalmente pequenas e didáticas. Em auditorias reais
 > (autorizadas), listas como `rockyou.txt` (incluída no Kali em
@@ -120,7 +125,7 @@ Os scripts de cada cenário estão em [`scripts/`](scripts/).
 |----------------|------------------------|-------------------|-------------|
 | FTP            | `msfadmin:msfadmin`   | ~3s (wordlist pequena) | Validado com login manual. Wordlist completa do Metasploit (174×1021) foi testada antes e estimada em 30h+ — trocada por wordlist curta e focada. Detalhes: [docs/cenario-1-ftp.md](docs/cenario-1-ftp.md) |
 | DVWA (web-form)| `admin:password`      | N/A (script custom) | Medusa e Hydra falharam (302 não tratado / falso positivo por token CSRF). Resolvido com script Python customizado. Detalhes: [docs/cenario-2-dvwa.md](docs/cenario-2-dvwa.md) |
-| SMB (spraying) | 🚧 em andamento        | —                 | — |
+| SMB (spraying) | `msfadmin:msfadmin`   | 21 combinações (7 usuários × 3 senhas) | Enumeração anônima revelou 32 usuários + compartilhamentos com acesso R/W anônimo. Senha reutilizada do Cenário 1. Detalhes: [docs/cenario-3-smb.md](docs/cenario-3-smb.md) |
 
 ## Medidas de mitigação
 
@@ -145,16 +150,35 @@ Os scripts de cada cenário estão em [`scripts/`](scripts/).
 
 ## Aprendizados
 
-- Força bruta clássica é ruidosa e facilmente detectável por qualquer
-  monitoramento básico de logs de autenticação.
-- Password spraying é mais furtivo, pois distribui as tentativas entre muitos
-  usuários em vez de concentrar em um só — por isso é uma técnica real usada
-  em ataques contra ambientes corporativos (ex.: Office 365, VPNs).
-- Formulários web exigem atenção extra na automação: cookies de sessão,
-  tokens CSRF e mensagens de erro customizadas podem exigir ajustes finos no
-  comando do Medusa.
-- A defesa mais eficaz não é uma única medida, mas a combinação de política de
-  senha forte + MFA + bloqueio de conta + monitoramento.
+- **Força bruta clássica é ruidosa** e facilmente detectável por qualquer
+  monitoramento básico de logs de autenticação — além de, na prática,
+  inviável com wordlists grandes (no Cenário 1, uma wordlist genérica de
+  178 mil combinações levaria mais de 30 horas; a solução foi usar uma
+  wordlist pequena e focada).
+- **Password spraying é mais furtivo**, pois distribui as tentativas entre
+  muitos usuários em vez de concentrar em um só — por isso é uma técnica
+  real usada em ataques contra ambientes corporativos (ex.: Office 365,
+  VPNs, Active Directory).
+- **Reconhecimento antes do ataque muda tudo**: no Cenário 3, a enumeração
+  anônima via SMB revelou os usuários reais do sistema (e que só 2 das 32
+  contas estavam ativas) — isso tornou o spraying muito mais eficiente do
+  que usar uma wordlist de usuários genérica.
+- **Formulários web modernos têm proteções que confundem ferramentas
+  genéricas de força bruta**: no Cenário 2, nem Medusa nem Hydra
+  funcionaram com a configuração padrão porque o DVWA usa token
+  anti-CSRF dinâmico — Medusa travou com erro de protocolo e o Hydra deu
+  falso positivo em 100% das tentativas. A solução foi um script Python
+  customizado que captura o token antes de cada tentativa.
+- **Validar manualmente qualquer achado é obrigatório**: o falso positivo
+  do Hydra no Cenário 2 mostra que confiar cegamente na saída de uma
+  ferramenta automatizada pode levar a conclusões erradas.
+- **Reutilização de senha é um risco real e comum**: a mesma credencial
+  (`msfadmin:msfadmin`) funcionou tanto no FTP (Cenário 1) quanto no SMB
+  (Cenário 3) — um único vazamento de senha compromete múltiplos
+  serviços.
+- A defesa mais eficaz não é uma única medida, mas a combinação de
+  política de senha forte + MFA + bloqueio de conta + monitoramento +
+  desabilitar enumeração/acesso anônimo.
 
 ## Referências
 
